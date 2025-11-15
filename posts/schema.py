@@ -45,19 +45,29 @@ class Query(graphene.ObjectType):
     all_users = graphene.List(UserType)
     
     def resolve_all_posts(self, info, limit=10, offset=0):
-        """Fetch all posts with pagination"""
-        return Post.objects.select_related('author').all()[offset:offset+limit]
+        """Fetch all posts with pagination and optimized queries"""
+        return Post.objects.select_related('author').prefetch_related(
+            'comments__author',
+            'likes__user',
+            'shares__user'
+        ).all()[offset:offset+limit]
     
     def resolve_post(self, info, id):
-        """Fetch a single post by ID"""
+        """Fetch a single post by ID with optimized queries"""
         try:
-            return Post.objects.select_related('author').get(pk=id)
+            return Post.objects.select_related('author').prefetch_related(
+                'comments__author',
+                'likes__user',
+                'shares__user'
+            ).get(pk=id)
         except Post.DoesNotExist:
             return None
     
     def resolve_user_posts(self, info, user_id):
-        """Fetch all posts by a specific user"""
-        return Post.objects.filter(author_id=user_id).select_related('author')
+        """Fetch all posts by a specific user with optimizations"""
+        return Post.objects.filter(author_id=user_id).select_related(
+            'author'
+        ).prefetch_related('comments__author', 'likes__user')
     
     def resolve_post_comments(self, info, post_id):
         """Fetch all comments for a specific post"""
